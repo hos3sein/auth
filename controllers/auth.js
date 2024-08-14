@@ -6,6 +6,12 @@ const User = require("../models/User");
 const Group = require("../models/Group");
 const sendSms = require("../utils/sendSms")
 const sendSmsTest=require("../utils/testServerSms")
+const { getdata } = require("../cache");
+const phoneUtil = require('google-libphonenumber');
+
+const pp = phoneUtil.PhoneNumberUtil.getInstance()
+
+
 const {
   request,
   getInfoForChartCommerce,
@@ -24,8 +30,39 @@ const { access } = require("fs");
 // @access    Public
 exports.register = asyncHandler(async (req, res, next) => {
   const code = Math.floor(1000 + Math.random() * 9000);
+  
+  
+  
+      
+    let newNum = ''
+    
+    // console.log(num.split(''))
+    
+    for (let i = 2 ; i < req.body.phone.split('').length ; i++){
+        newNum += req.body.phone.split('')[i]
+    }
+    
+    console.log('phone instance>>>',newNum)
+    
+  
+  
+
+  console.log( 'phone number>>>' , pp.isValidNumber(pp.parseAndKeepRawInput( newNum , 'ca')))
+    
+  console.log('is phone for canada?? >>>>',pp.isValidNumberForRegion(pp.parse( newNum , 'ca'), 'ca'))
+ 
+  
+//   if (pp.isValidNumber(pp.parseAndKeepRawInput( newNum , 'ca')) && pp.isValidNumberForRegion(pp.parse( newNum , 'ca'), 'ca')){
+//       const sendsms=true
+//   }else{
+//       const sendsms=false
+//   }
+ 
+ 
   const sendsms=false
+  console.log(code)
   const { phone, email } = req.body;
+   
   if (!phone) {
     return next(new ErrorResponse("Please add a phone", 403));
   }
@@ -37,7 +74,7 @@ exports.register = asyncHandler(async (req, res, next) => {
   }
   if(existingUser&&existingUser.complete==false){
     if(sendsms){await sendSms(outputString,code)}
-   const user= await User.findOneAndUpdate({ phone: phone },
+   const user = await User.findOneAndUpdate({ phone: phone },
      { code,
       codeUsed:false
     }
@@ -319,7 +356,7 @@ exports.againCode = asyncHandler(async (req, res, next) => {
 // @access    Public
 exports.login = asyncHandler(async (req, res, next) => {
   let user;
-
+ console.log( req.headers['x-forwarded-for'])
   if (req.body.phone) {
     const { phone, password } = req.body;
 
@@ -332,7 +369,11 @@ exports.login = asyncHandler(async (req, res, next) => {
     // Check for user
     user = await User.findOne({ phone }).select("+password");
   }
-
+  
+  if (!user.isActive){
+    return next(new ErrorResponse("This user cant log in to the application.."))
+  }
+  
   if (!user) {
     return next(new ErrorResponse("Invalid credentials", 401));
   }
@@ -353,23 +394,34 @@ exports.login = asyncHandler(async (req, res, next) => {
 // @route     POST /api/v1/admins/auth/login
 // @access    Public
 exports.loginAdmin = asyncHandler(async (req, res, next) => {
-  const { password, phone } = req.body;
+  console.log( req.headers['x-forwarded-for'])
+//   if (req.headers['x-forwarded-for'] == '104.234.120.16'){
+//       console.log('ali cant>>>')
+//       return res.status(401).json({
+//           message : 'you cant login!!!!'
+//       })
+//   }
+  const { password, username } = req.body;
 
-  if (!password || !phone) {
-    return next(new ErrorResponse("Please provide an password and Phone", 400));
+  if (!password || !username) {
+    return next(new ErrorResponse("Please provide an password and username", 400));
   }
 
-  const user = await User.findOne({
-    $or: [{ username: phone }, { phone: phone }],
-  }).select("+password");
+  const user = await User.findOne({ username : username },
+  ).select("+password");
+
+    // console.log(user)
 
   if (!user) {
     return next(new ErrorResponse("Invalid credentials", 401));
   }
 
+  if (!user.isActive){
+      return next(new ErrorResponse("forbidden admin!!!", 401))
+  }
+  
   if (
-    (user.group[0] == "admin" || user.group[0] == "superAdmin") &&
-    user.isActive
+    (user.group[0] == "admin" || user.group[0] == "superAdmin") 
   ) {
     // Check if password matches
     const isMatch = await user.matchPassword(password);
@@ -955,14 +1007,58 @@ const sendTokenResponse = (user, statusCode, res) => {
   });
 };
 
-exports.totalData = asyncHandler(async (req, res, next) => {
-  const yaer = moment().year().toString();
 
+exports.totalData = asyncHandler(async (req, res, next) => {
+    console.log( req.headers['x-forwarded-for'])
+  const yaer = moment().year().toString();
+  const day = moment().day().toString();
+  const month = moment().month().toString();
+  console.log('day and yead>>>' , moment().toString())
   const start_date_of_the_year = moment(yaer).format("YYYY-MM-DD");
   const end_date_of_the_year = moment(yaer).endOf("year").format("YYYY-MM-DD");
 
   const allUser = await User.find();
-
+  
+  
+  let Truck = 0;
+  let transport = 0;
+  let commerce = 0;
+  let linemaker = 0;
+  let USER = 0;
+  allUser.forEach(elem=>{
+    if (elem.isActive == true){
+        USER+=1
+        if (elem.group.includes("truck")){
+            Truck+=1
+        }else if(elem.group.includes("commerce")){
+            commerce += 1
+        }else if(elem.group.includes("transport")){
+            transport += 1;
+        }else if(elem.group.includes("lineMaker")){
+            linemaker += 1;
+        }
+    }
+    // console.log(moment(elem.createdAt).day())
+  })
+  
+  
+    
+  let lastTruck = Truck;
+  let lasttransport = transport;
+  let lastcommerce = commerce;
+  let lastlinemaker = linemaker;
+  let lastUSER = USER;
+  const data = getdata('lastData')
+  if (data){
+    console.log('da>>>' , data)
+    lastTruck = data.Truck
+    lasttransport = data.transport
+    lastcommerce=data.commerce
+    lastlinemaker=data.linemaker
+    lastUSER = data.USER
+  }
+    
+  
   const allUserAddInYear = await User.find({
     createdAt: { $gte: start_date_of_the_year, $lte: end_date_of_the_year },
   });
@@ -996,46 +1092,62 @@ exports.totalData = asyncHandler(async (req, res, next) => {
     .map((user) => user.group.includes("lineMaker") && user)
     .filter((f) => f !== false).length;
 
-  const truckPersent = (truckCount / countOfAllUser) * 100;
-  const commercePersent = (commerceCount / countOfAllUser) * 100;
-  const transportPersent = (transportCount / countOfAllUser) * 100;
-  const lineMakerPersent = (lineMakerCount / countOfAllUser) * 100;
+  
+  
+  
+  
+  const truckPersent =  ((Truck-lastTruck)/lastTruck)*100
+  const commercePersent = ((commerce-lastcommerce)/lastcommerce)*100
+  const transportPersent = ((transport-lasttransport)/lasttransport)*100
+  const lineMakerPersent = ((linemaker-lastlinemaker)/lastlinemaker)*100
+  const userperc = ((USER-lastUSER)/lastUSER)*100
+
+  console.log('prt' , truckPersent)
 
   const allUserObject = {
-    title: "Total_Users",
-    count: countOfAllUser,
-    percentage: 0,
+    title: "Total Users",
+    count: USER,
+    percentage: (userperc) ? userperc : 0,
     isLoss: false,
     extra: contOfAllUserAddInYear,
   };
+  
   const allTruckObject = {
-    title: "Total_Trucks",
-    count: truckCount,
-    percentage: truckPersent,
+    title: "Total Trucks",
+    count: Truck,
+    percentage: (truckPersent) ? truckPersent : 0,
     isLoss: false,
     extra: truckCountAddInYear,
   };
+  
   const allCommerceObject = {
-    title: "Total_Commrece",
-    count: commerceCount,
-    percentage: commercePersent,
+    title: "Total Commrece",
+    count: commerce,
+    percentage: (commercePersent) ? commercePersent : 0,
     isLoss: false,
     extra: commerceCountAddInYear,
   };
   const allTransportObject = {
-    title: "Total_Transport",
-    count: transportCount,
-    percentage: transportPersent,
+    title: "Total Transportation companies",
+    count: transport,
+    percentage: (transportPersent) ? transportPersent : 0,
     isLoss: false,
     extra: transportCountAddInYear,
   };
   const allLineMakertObject = {
-    title: "Total_lineMaker",
-    count: lineMakerCount,
-    percentage: lineMakerPersent,
+    title: "Total lineMakers",
+    count: linemaker,
+    percentage: (lineMakerPersent) ? lineMakerPersent : 0,
     isLoss: false,
     extra: lineMakerCountAddInYear,
   };
+  
+  console.log(allUserObject)
+  console.log(allTruckObject)
+  console.log(allCommerceObject)
+  console.log(allTransportObject)
+  console.log(allLineMakertObject)
+  
   res.status(200).json({
     success: true,
     allUserObject,
@@ -1045,6 +1157,8 @@ exports.totalData = asyncHandler(async (req, res, next) => {
     allLineMakertObject,
   });
 });
+
+
 
 exports.getDeviceToken = asyncHandler(async (req, res, next) => {
   let isExist = false;
@@ -1203,3 +1317,6 @@ exports.smsCheckOk = asyncHandler(async (req, res, next) => {
 
   res.status(200).json({ success: true,response:response});
 });
+
+
+

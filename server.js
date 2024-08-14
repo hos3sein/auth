@@ -17,7 +17,7 @@ const cors = require("cors");
 const errorHandler = require("./middleware/error");
 const connectDB = require("./config/db");
 const { checkGroup } = require("./utils/checkGroup");
-
+const User = require("./models/User");
 // INIT
 
 // configPath
@@ -74,6 +74,37 @@ app.use(cors(corsOptions));
 // Set static folder
 var public = path.join(__dirname, "public");
 app.use(express.static(public));
+
+const { setdata, getdata } = require("./cache");
+
+
+setInterval(async() => {
+  const allUser = await User .find();
+
+  let Truck = 0;
+  let transport = 0;
+  let commerce = 0;
+  let linemaker = 0;
+  let USER = 0;
+  allUser.forEach(elem=>{
+    if (elem.isActive == true){
+        USER+=1
+        if (elem.group.includes("truck")){
+            Truck+=1
+        }else if(elem.group.includes("commerce")){
+            commerce += 1
+        }else if(elem.group.includes("transport")){
+            transport += 1;
+        }else if(elem.group.includes("lineMaker")){
+            linemaker += 1;
+        }
+    }
+  })
+  setdata('lastData' , {Truck : Truck , transport : transport , commerce : commerce , linemaker : linemaker , USER : USER})
+  console.log(getdata('lastData'))
+}, 5*60*1000);
+
+
 
 app.use("/api/v1/auth", auth);
 // Mount routers6
