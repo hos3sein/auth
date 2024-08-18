@@ -3,7 +3,7 @@ const ErrorResponse = require("../utils/errorResponse");
 const User = require("../models/User");
 const Group = require("../models/Group");
 const sendSms = require("../utils/sendSms")
-
+const adminGroup = require("../models/adminGroup");
 // @desc      create Permission
 // @route     POST /api/v1/admins/permission/all/:id
 // @access    private
@@ -226,4 +226,123 @@ exports.sms=asyncHandler(async (req, res, next) => {
    data:result
  })
  })
+ 
+ 
+ 
+ 
+ exports.addNewGroup = asyncHandler(async(req , res , next)=>{
+  console.log('body>>>>',req.body)
+  if (!req.body.name || !req.body.accessArray){
+    return res.status(400).json({
+      success : false,
+      data : null,
+      error : `please complete all field and try again!!!`
+    })
+  }
+  new adminGroup(req.body).save().then((resault)=>{
+    res.status(200).json({
+      success : true,
+      data : resault,
+      error : null
+    })
+  }).catch((err)=>{
+    res.status(503).json({
+      success : false,
+      data : null,
+      error : `${err}`
+    })
+  })
+})
+
+exports.getAllAdminGroup = asyncHandler(async(req , res , next)=>{
+  adminGroup.find().then((resault)=>{
+    res.status(200).json({
+      success : true,
+      data : resault,
+      error : null
+    })
+  }).catch((err)=>{
+    res.status(503).json({
+      success : false,
+      data : '',
+      error : `${err}`
+    })
+  })
+})
+
+exports.updateAdminGroup = asyncHandler(async(req , res , next)=>{
+  const id = req.params.groupid
+  if (!req.body){
+    res.status(400).json({
+      success : false,
+      data : null,
+      error : `please complete all fields and try again!!!`
+    })
+  }
+  adminGroup.findByIdAndUpdate(id , req.body).then((resault)=>{
+    res.status(200).json({
+      success : true,
+      data : resault,
+      error : null
+    })
+  }).catch((err)=>{
+    res.status(503).json({
+      success : false,
+      data : '',
+      error : `${err}`
+    })
+  })
+})
+
+
+
+exports.deleteAdminGroup = asyncHandler(async(req , res , next)=>{
+    const id = req.params.groupid
+    const group = await adminGroup.findById(id)
+    if (!group){
+      res.status(400).json({
+        success : false,
+        data : null,
+        error : `the group not found!!`
+      })
+    }
+    if (group.isActive){
+        adminGroup.findByIdAndUpdate(id , {isActive : false}).then(async(resault)=>{
+      const updated = await adminGroup.findById(id)    
+      res.status(200).json({
+        success : true,
+        data : updated,
+        error : null
+      })
+    }).catch((err)=>{
+      console.log('databaseError>>>>' , err)
+      res.status(503).json({
+        success : false,
+        data : '',
+        error : `${err}`
+      })
+    })
+    }else{
+    adminGroup.findByIdAndUpdate(id , {isActive : true}).then(async(resault)=>{
+      const updated = await adminGroup.findById(id)
+      res.status(200).json({
+        success : true,
+        data : updated,
+        error : null
+      })
+    }).catch((err)=>{
+      console.log('databaseError>>>>' , err)
+      res.status(503).json({
+        success : false,
+        data : '',
+        error : `${err}`
+      })
+    })
+    }
+    
+})
+ 
+ 
+ 
+ 
  

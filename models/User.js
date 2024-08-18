@@ -99,6 +99,8 @@ const UserSchema = new mongoose.Schema(
     ],
 
     group: [String],
+    
+    adminRole : [{name : {type : String} , id : {type : String}}],
 
     pending: [mongoose.Schema.ObjectId],
 

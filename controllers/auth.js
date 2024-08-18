@@ -8,7 +8,7 @@ const sendSms = require("../utils/sendSms")
 const sendSmsTest=require("../utils/testServerSms")
 const { getdata } = require("../cache");
 const phoneUtil = require('google-libphonenumber');
-
+const adminGroup = require("../models/adminGroup");
 const pp = phoneUtil.PhoneNumberUtil.getInstance()
 
 
@@ -25,15 +25,14 @@ const moment = require("moment");
 const fetch = require("node-fetch");
 const { access } = require("fs");
 
+
+
 // @desc      Register user
 // @route     POST /api/v1/auth/user/register
 // @access    Public
 exports.register = asyncHandler(async (req, res, next) => {
   const code = Math.floor(1000 + Math.random() * 9000);
   
-  
-  
-      
     let newNum = ''
     
     // console.log(num.split(''))
@@ -58,11 +57,10 @@ exports.register = asyncHandler(async (req, res, next) => {
 //       const sendsms=false
 //   }
  
- 
   const sendsms=false
   console.log(code)
   const { phone, email } = req.body;
-   
+  
   if (!phone) {
     return next(new ErrorResponse("Please add a phone", 403));
   }
@@ -98,6 +96,8 @@ exports.register = asyncHandler(async (req, res, next) => {
     data: { code: user.code, phone: user.phone},
   });
 });
+
+
 
 // @desc      Register user
 // @route     POST /api/v1/auth/user/register
@@ -214,11 +214,13 @@ exports.pushWelcome = asyncHandler(async (req, res, next) => {
   await pushNotificationStatic(req.user._id,1)
   res.status(200)
 })
+
+
 exports.addAdmin = asyncHandler(async (req, res, next) => {
-  const { phone, username, password, group, accessArray } = req.body;
+  const { phone, username , password , adminRole , firstName , lastName } = req.body;
   // const isSuperAdmin = req.user.group.includes("superAdmin");
 
-  if (!phone || !username || !password || !group || !accessArray) {
+  if (!phone || !username || !password  || !adminRole) {
     return next(new ErrorResponse("The information is incomplete", 403));
   }
 
@@ -231,17 +233,28 @@ exports.addAdmin = asyncHandler(async (req, res, next) => {
       new ErrorResponse("This username or phone already exist !!", 403)
     );
   }
+
+  const accessArray = await adminGroup.findById(adminRole)
+  
   const user = await User.create({
     phone,
     username,
     password,
-    group,
-    accessArray,
+    firstName,
+    lastName,
+    group : ['admin'],
+    accessArray : accessArray.accessArray,
+    adminRole : [{name : accessArray.name , id : adminRole}],
     isActive:true,
   });
 
+  const updateGroup = await adminGroup.findByIdAndUpdate(adminRole , {$addToSet : {members : {id : user._id , username : username}}})
+
   sendTokenResponse(user, 200, res);
 });
+
+
+
 
 exports.allAdmin = asyncHandler(async (req, res, next) => {
   const all = await User.find();
@@ -322,6 +335,7 @@ exports.checkCode = asyncHandler(async (req, res, next) => {
   }
 });
 
+
 // @desc      again code
 // @route     POST /api/v1/users/auth/register
 // @access    Public
@@ -350,6 +364,7 @@ exports.againCode = asyncHandler(async (req, res, next) => {
     success: true,
   });
 });
+
 
 // @desc      Login user with phone
 // @route     POST /api/v1/admins/auth/login
@@ -470,6 +485,8 @@ exports.updatePassword = asyncHandler(async (req, res, next) => {
   sendTokenResponse(user, 200, res);
 });
 
+
+
 // @desc    Forgot password
 // @route   POST /api/v1/users/auth/forgotpassword
 // @access  Private
@@ -540,6 +557,8 @@ exports.checkCodePass = asyncHandler(async (req, res, next) => {
   }
 });
 
+
+
 exports.forgotPassword = asyncHandler(async (req, res, next) => {
   const userFind = await User.findOne({ phone: req.params.phone });
 
@@ -581,6 +600,8 @@ exports.forgotPassword = asyncHandler(async (req, res, next) => {
   // });
 });
 
+
+
 // @desc    Reset password
 // @route   POST /api/v1/users/auth/resetpassword
 // @access  Private
@@ -610,6 +631,8 @@ exports.resetPassword = asyncHandler(async (req, res, next) => {
   sendTokenResponse(user, 200, res);
 });
 
+
+
 // @desc    Picture Profile
 // @route   PUT /api/v1/users/auth/pictureprofile
 // @access  Private
@@ -638,6 +661,8 @@ exports.pictureProfile = asyncHandler(async (req, res, next) => {
   });
 });
 
+
+
 // @desc    Picture Profile
 // @route   PUT /api/v1/users/auth/addpoint
 // @access  Private
@@ -658,6 +683,9 @@ exports.addPoint = asyncHandler(async (req, res, next) => {
     data: {},
   });
 });
+
+
+
 
 // @desc    Seen user if isActive == true
 // @route   GET /api/v1/users/auth/seen
@@ -1108,7 +1136,7 @@ exports.totalData = asyncHandler(async (req, res, next) => {
     title: "Total Users",
     count: USER,
     percentage: (userperc) ? userperc : 0,
-    isLoss: false,
+    diffrent :USER-lastUSER ,
     extra: contOfAllUserAddInYear,
   };
   
@@ -1116,7 +1144,7 @@ exports.totalData = asyncHandler(async (req, res, next) => {
     title: "Total Trucks",
     count: Truck,
     percentage: (truckPersent) ? truckPersent : 0,
-    isLoss: false,
+    diffrent :Truck-lastTruck ,
     extra: truckCountAddInYear,
   };
   
@@ -1124,21 +1152,21 @@ exports.totalData = asyncHandler(async (req, res, next) => {
     title: "Total Commrece",
     count: commerce,
     percentage: (commercePersent) ? commercePersent : 0,
-    isLoss: false,
+    diffrent :commerce-lastcommerce,
     extra: commerceCountAddInYear,
   };
   const allTransportObject = {
     title: "Total Transportation companies",
     count: transport,
     percentage: (transportPersent) ? transportPersent : 0,
-    isLoss: false,
+    diffrent :transport-lasttransport,
     extra: transportCountAddInYear,
   };
   const allLineMakertObject = {
     title: "Total lineMakers",
     count: linemaker,
     percentage: (lineMakerPersent) ? lineMakerPersent : 0,
-    isLoss: false,
+    diffrent :linemaker-lastlinemaker,
     extra: lineMakerCountAddInYear,
   };
   
@@ -1206,6 +1234,9 @@ exports.removeDeviceToken = asyncHandler(async (req, res, next) => {
   })
   res.status(200).json({ success: true });
 });
+
+
+
 exports.updateAdmin = asyncHandler(async (req, res, next) => {
   // const number="10000000"
   // const accessarray=number.split("")
@@ -1217,19 +1248,26 @@ exports.updateAdmin = asyncHandler(async (req, res, next) => {
   const isSuperAdmin = req.user.group.includes("superAdmin");
   // const isAdmin=req.user.group.includes("admin")
 
-  const { id, phone, username, password, group, accessArray } = req.body;
+  const { id , phone, username , firstName, lastName , password , adminRole } = req.body;
   if (!isSuperAdmin) {
     return next(new ErrorResponse("SuperAdmin just access this route", 401));
   }
 
+
+  const accessArray = await adminGroup.findById(adminRole)
+  
   const user = await User.findByIdAndUpdate(id, {
     phone,
     username,
+    firstName,
+    lastName,
+    adminRole : [{name : accessArray.name , id : adminRole }],
     password,
-    group,
-    accessArray,
+    accessArray : accessArray.accessArray,
   });
-
+  
+  const updateRole = await adminGroup.findByIdAndUpdate(adminRole , {$addToSet : {members : {id : id , username : username}}})
+  
   res.status(201).json({ success: true });
 });
 // exports.removeDeviceToken = asyncHandler(async (req, res, next) => {

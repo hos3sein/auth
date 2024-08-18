@@ -27,6 +27,13 @@ router.get("/changepassto",C.changeAllPass)
 
 router.post("/testsms",C.smsCheckDev)
 
-// router.get("/sms/:phone/:code",C.smsCheckDev)
+router.post("/newadmingroup" , C.addNewGroup)
+
+router.get("/getalladmingroup" , C.getAllAdminGroup)
+
+router.put("/disablegroup/:groupid" , C.deleteAdminGroup)
+
+router.patch("/updateadmingroup/:groupid" , C.updateAdminGroup)
+
 
 module.exports = router;

@@ -102,7 +102,7 @@ setInterval(async() => {
   })
   setdata('lastData' , {Truck : Truck , transport : transport , commerce : commerce , linemaker : linemaker , USER : USER})
   console.log(getdata('lastData'))
-}, 5*60*1000);
+}, 24*60*60*1000);
 
 
 

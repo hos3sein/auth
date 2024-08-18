@@ -17,9 +17,13 @@ exports.protect = asyncHandler(async (req, res, next) => {
 
   // Make sure token exists
   if (!token) {
+      console.log( 'token is not exist')
     return next(new ErrorResponse("Not authorized to access this route", 401));
   }
-
+ 
+ 
+//   console.log(token)
+ 
   try {
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
