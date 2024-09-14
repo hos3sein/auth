@@ -265,7 +265,12 @@ exports.getUser = asyncHandler(async (req, res, next) => {
     allUser.forEach((user)=>{
       user.group.forEach(item=>{
          if(item=="transport"){
-          users.push(user._id)
+           const userObj={
+            _id:user._id,
+            pictureProfile:user.pictureProfile,
+            username:user.username
+          }
+          users.push(userObj)
          }
       })
  })

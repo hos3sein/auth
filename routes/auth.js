@@ -11,7 +11,7 @@ const router = express.Router();
 // ! OK 1
 router.post("/register", C.register);
 
-router.post("/addadmin", C.addAdmin);
+router.post("/addadmin", protect ,C.addAdmin);
 
 router.post("/updateadmin",protect,C.updateAdmin)
 

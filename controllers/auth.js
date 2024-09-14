@@ -12,6 +12,9 @@ const adminGroup = require("../models/adminGroup");
 const pp = phoneUtil.PhoneNumberUtil.getInstance()
 
 
+// Authenticate
+
+
 const {
   request,
   getInfoForChartCommerce,
@@ -19,6 +22,7 @@ const {
   getInfoForChartTruck,
   getPointAmount,
   smsCheck,
+  newLog,
   createWallet
 } = require("../utils/request");
 const moment = require("moment");
@@ -68,7 +72,7 @@ exports.register = asyncHandler(async (req, res, next) => {
   let outputString = "+" + inputString.slice(2);
   const existingUser = await User.findOne({ phone: phone });
   if (existingUser&&existingUser.complete==true) {
-    return next(new ErrorResponse("This phone number already used!!!", 403));
+    return next(new ErrorResponse("This phone number has already been registered", 403));
   }
   if(existingUser&&existingUser.complete==false){
     if(sendsms){await sendSms(outputString,code)}
@@ -217,6 +221,7 @@ exports.pushWelcome = asyncHandler(async (req, res, next) => {
 
 
 exports.addAdmin = asyncHandler(async (req, res, next) => {
+  console.log('>>>>>>>>>>>>',req.user)
   const { phone, username , password , adminRole , firstName , lastName } = req.body;
   // const isSuperAdmin = req.user.group.includes("superAdmin");
 
@@ -249,7 +254,20 @@ exports.addAdmin = asyncHandler(async (req, res, next) => {
   });
 
   const updateGroup = await adminGroup.findByIdAndUpdate(adminRole , {$addToSet : {members : {id : user._id , username : username}}})
-
+    
+   try{
+      const log = {
+      admin : {username : req.user.username , phone : req.user.phone , adminRole : "superAdmin",group : req.user?.group  , firstName : req.user?.firstName , lastName : req.user?.lastName},
+      section : "Admin",
+      part : "Add Admin",
+      success : true,
+      description : `${username} successfully Add as a admin by ${req.user.username}`,
+    }
+    await newLog(log)
+   }catch(err){
+       console.log(err)
+   }
+    
   sendTokenResponse(user, 200, res);
 });
 
@@ -267,6 +285,7 @@ exports.allAdmin = asyncHandler(async (req, res, next) => {
       }
     });
   });
+    
 
   res.status(200).json({
     success: true,
@@ -424,6 +443,7 @@ exports.loginAdmin = asyncHandler(async (req, res, next) => {
 
   const user = await User.findOne({ username : username },
   ).select("+password");
+  console.log('user>>' , user)
 
     // console.log(user)
 
@@ -444,10 +464,19 @@ exports.loginAdmin = asyncHandler(async (req, res, next) => {
     if (!isMatch) {
       return next(new ErrorResponse("The password is incorrect", 401));
     }
+    const log = {
+      admin : {username :username , phone : user.phone , adminRole : user?.adminRole[0]?.name, firstName : user?.firstName , lastName : user?.lastName , group : user?.group },
+      section : "authontication",
+      part : "login",
+      success : true,
+      description : `${username} successfully loged in to the pannel`,
+    }
+    await newLog(log)
     sendTokenResponse(user, 200, res);
   } else {
     return next(new ErrorResponse("You are not an admin", 401));
   }
+  
 });
 
 // @desc      Get current logged in user
@@ -751,9 +780,21 @@ exports.activeUser = asyncHandler(async (req, res, next) => {
   const isAdmin = req.user.group.includes("admin");
 
   if (isSuperAdmin || isAdmin) {
-    await User.findByIdAndUpdate(req.params.id, {
+    const user = await User.findByIdAndUpdate(req.params.id, {
       isActive: true,
     });
+    try{
+      const log = {
+      admin : {username : req.user.username , phone : req.user.phone , adminRole : req.user?.adminRole ,group : req.user?.group , firstName : req.user?.firstName , lastName : req.user?.lastName},
+      section : "User",
+      part : "Active User",
+      success : true,
+      description : `${req.user.username} successfully activate user : ${user.username}`,
+    }
+    await newLog(log)
+   }catch(err){
+       console.log(err)
+   }
     return res.status(200).json({
       success: true,
     });
@@ -769,9 +810,21 @@ exports.deActiveUser = asyncHandler(async (req, res, next) => {
   const isAdmin = req.user.group.includes("admin");
 
   if (isSuperAdmin || isAdmin) {
-    await User.findByIdAndUpdate(req.params.id, {
+    const user = await User.findByIdAndUpdate(req.params.id, {
       isActive: false,
     });
+    try{
+      const log = {
+      admin : {username : req.user.username , phone : req.user.phone , adminRole : req.user?.adminRole ,group : req.user?.group , firstName : req.user?.firstName , lastName : req.user?.lastName},
+      section : "User",
+      part : "DeActive User",
+      success : true,
+      description : `${req.user.username} successfully DeActivate user : ${user.username}`,
+    }
+    await newLog(log)
+   }catch(err){
+       console.log(err)
+   }
     return res.status(200).json({
       success: true,
     });
@@ -782,6 +835,7 @@ exports.deActiveUser = asyncHandler(async (req, res, next) => {
     error: "not access to this route",
   });
 });
+
 
 exports.checkPhone = asyncHandler(async (req, res, next) => {
   const code = Math.floor(1000 + Math.random() * 9000);
@@ -835,6 +889,8 @@ exports.changePassword = asyncHandler(async (req, res, next) => {
   sendTokenResponse(user, 200, res);
 });
 
+
+
 exports.changeUsername = asyncHandler(async (req, res, next) => {
   const code = Math.floor(Math.random() * 90000) + 10000;
 
@@ -869,6 +925,8 @@ exports.changeUsername = asyncHandler(async (req, res, next) => {
   });
 });
 
+
+
 // @desc      Get all admins
 // @route     GET /api/v1/admins/admin/all
 // @access    Private
@@ -898,6 +956,8 @@ exports.addGroup = asyncHandler(async (req, res, next) => {
   });
 });
 
+
+
 // @desc      Log user out / clear cookie
 // @route     GET /api/v1/admins/auth/logout
 // @access    Private
@@ -909,6 +969,7 @@ exports.logout = asyncHandler(async (req, res, next) => {
 
   res.status(200).json({ success: true });
 });
+
 
 // @desc      Log user out / clear cookie
 // @route     GET /api/v1/admins/auth/logout
@@ -957,6 +1018,8 @@ exports.requestBank = asyncHandler(async (req, res, next) => {
 
   res.status(200).json({ success: true });
 });
+
+
 
 // Get token from model, create cookie and send response
 const sendTokenResponse = (user, statusCode, res) => {
@@ -1020,7 +1083,8 @@ const sendTokenResponse = (user, statusCode, res) => {
       group: user.group,
       accessArray: user.accessArray,
       points:user.points,
-      totalInvitedUser:user.totalInvitedUser
+      totalInvitedUser:user.totalInvitedUser,
+      adminRole : user.adminRole
     };
   }
 
@@ -1192,7 +1256,7 @@ exports.getDeviceToken = asyncHandler(async (req, res, next) => {
   let isExist = false;
   let updateDeviceToken;
   const { deviceToken } = req.body;
-
+  console.log('device token>>>>>' , req.body)
   const user = await User.findById(req.user._id);
   console.log(user);
   if (!user) {
@@ -1267,7 +1331,18 @@ exports.updateAdmin = asyncHandler(async (req, res, next) => {
   });
   
   const updateRole = await adminGroup.findByIdAndUpdate(adminRole , {$addToSet : {members : {id : id , username : username}}})
-  
+  try{
+      const log = {
+      admin : {username : req.user.username , phone : req.user.phone , adminRole : req.user?.adminRole ,group : req.user?.group , firstName : req.user?.firstName , lastName : req.user?.lastName},
+      section : "Admin",
+      part : "Update Admin",
+      success : true,
+      description : `${req.user.username} successfully update Admin : ${user.username} to ${phone}, ${username} , ${firstName} , ${lastName} , ${password} , ${accessArray.name}`,
+    }
+    await newLog(log)
+   }catch(err){
+       console.log(err)
+   }
   res.status(201).json({ success: true });
 });
 // exports.removeDeviceToken = asyncHandler(async (req, res, next) => {
@@ -1318,6 +1393,7 @@ exports.getChartInfo = asyncHandler(async (req, res, next) => {
     }
   }
 });
+
 exports.generateQrUrlForInvite = asyncHandler(async (req, res, next) => {
   const userId = req.user._id;
   const username=req.user.username

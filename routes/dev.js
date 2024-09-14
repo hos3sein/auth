@@ -27,13 +27,13 @@ router.get("/changepassto",C.changeAllPass)
 
 router.post("/testsms",C.smsCheckDev)
 
-router.post("/newadmingroup" , C.addNewGroup)
+router.post("/newadmingroup" , protect , C.addNewGroup)
 
-router.get("/getalladmingroup" , C.getAllAdminGroup)
+router.get("/getalladmingroup" , protect ,C.getAllAdminGroup)
 
-router.put("/disablegroup/:groupid" , C.deleteAdminGroup)
+router.put("/disablegroup/:groupid" , protect ,C.deleteAdminGroup)
 
-router.patch("/updateadmingroup/:groupid" , C.updateAdminGroup)
+router.patch("/updateadmingroup/:groupid" , protect ,C.updateAdminGroup)
 
 
 module.exports = router;

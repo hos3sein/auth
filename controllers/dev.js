@@ -4,6 +4,7 @@ const User = require("../models/User");
 const Group = require("../models/Group");
 const sendSms = require("../utils/sendSms")
 const adminGroup = require("../models/adminGroup");
+const { newLog } = require("../utils/request");
 // @desc      create Permission
 // @route     POST /api/v1/admins/permission/all/:id
 // @access    private
@@ -239,7 +240,15 @@ exports.sms=asyncHandler(async (req, res, next) => {
       error : `please complete all field and try again!!!`
     })
   }
-  new adminGroup(req.body).save().then((resault)=>{
+  new adminGroup(req.body).save().then(async(resault)=>{
+      const Log = {
+      admin : {username :req.user.username , phone : req.user.phone , adminRole : req.user?.adminRole, group : req.user?.group  , firstName : req.user?.firstName , lastName : req.user?.lastName},
+      section : "Admin",
+      part : "add new group",
+      success : true,
+      description : `${req.user.username} successfully add group named ${req.body.name}`,
+    }
+    await newLog(Log)
     res.status(200).json({
       success : true,
       data : resault,
@@ -253,6 +262,8 @@ exports.sms=asyncHandler(async (req, res, next) => {
     })
   })
 })
+
+
 
 exports.getAllAdminGroup = asyncHandler(async(req , res , next)=>{
   adminGroup.find().then((resault)=>{
@@ -270,6 +281,7 @@ exports.getAllAdminGroup = asyncHandler(async(req , res , next)=>{
   })
 })
 
+
 exports.updateAdminGroup = asyncHandler(async(req , res , next)=>{
   const id = req.params.groupid
   if (!req.body){
@@ -279,7 +291,15 @@ exports.updateAdminGroup = asyncHandler(async(req , res , next)=>{
       error : `please complete all fields and try again!!!`
     })
   }
-  adminGroup.findByIdAndUpdate(id , req.body).then((resault)=>{
+  adminGroup.findByIdAndUpdate(id , req.body).then(async(resault)=>{
+     const Log = {
+      admin : {username :req.user.username , phone : req.user.phone , adminRole : req.user?.adminRole ,group : req.user?.group , firstName : req.user?.firstName , lastName : req.user?.lastName},
+      section : "Admin",
+      part : "update admin group",
+      success : true,
+      description : `${req.user.username} successfully update group named ${resault.name} to ${req.body}`,
+    }
+    await newLog(Log)
     res.status(200).json({
       success : true,
       data : resault,
@@ -309,6 +329,14 @@ exports.deleteAdminGroup = asyncHandler(async(req , res , next)=>{
     if (group.isActive){
         adminGroup.findByIdAndUpdate(id , {isActive : false}).then(async(resault)=>{
       const updated = await adminGroup.findById(id)    
+      const Log = {
+      admin : {username :req.user.username , phone : req.user.phone , adminRole : req.user?.adminRole ,group : req.user?.group , firstName : req.user?.firstName , lastName : req.user?.lastName},
+      section : "Admin",
+      part : "disable admin group",
+      success : true,
+      description : `${req.user.username} successfully disabled group named ${resault.name}`,
+    }
+    await newLog(Log)
       res.status(200).json({
         success : true,
         data : updated,
@@ -325,6 +353,14 @@ exports.deleteAdminGroup = asyncHandler(async(req , res , next)=>{
     }else{
     adminGroup.findByIdAndUpdate(id , {isActive : true}).then(async(resault)=>{
       const updated = await adminGroup.findById(id)
+      const Log = {
+      admin : {username :req.user.username , phone : req.user.phone , adminRole : req.user?.adminRole ,group : req.user?.group , firstName : req.user?.firstName , lastName : req.user?.lastName},
+      section : "Admin",
+      part : "enabled admin group",
+      success : true,
+      description : `${req.user.username} successfully enabled group named ${resault.name}`,
+    }
+    await newLog(Log)
       res.status(200).json({
         success : true,
         data : updated,
