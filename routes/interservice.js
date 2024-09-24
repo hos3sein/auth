@@ -17,6 +17,8 @@ router.get("/unsetvip/:id",C.unSetVip)
 
 router.get("/balance/:id/:price",C.balanceAmount)
 
+router.post("/putNewPoints" , C.putPoints )
+
 router.get("/getuser/:id",C.getUserA)
 
 router.post("/deletegroup",C.deleteGroupe)

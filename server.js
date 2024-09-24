@@ -18,6 +18,7 @@ const errorHandler = require("./middleware/error");
 const connectDB = require("./config/db");
 const { checkGroup } = require("./utils/checkGroup");
 const User = require("./models/User");
+const lastUsers = require("./models/lastUsers")
 // INIT
 
 // configPath
@@ -33,7 +34,7 @@ dotenv.config({
 
 // Connect to database...
 connectDB();
-checkGroup();
+// checkGroup();
 
 // Route files
 const auth = require("./routes");
@@ -76,10 +77,12 @@ var public = path.join(__dirname, "public");
 app.use(express.static(public));
 
 const { setdata, getdata } = require("./cache");
+const { setingData } = require("./analyzor");
 
+setingData()
 
 setInterval(async() => {
-  const allUser = await User .find();
+  const allUser = await User.find();
 
   let Truck = 0;
   let transport = 0;
@@ -91,18 +94,40 @@ setInterval(async() => {
         USER+=1
         if (elem.group.includes("truck")){
             Truck+=1
-        }else if(elem.group.includes("commerce")){
+        } 
+        if(elem.group.includes("commerce")){
             commerce += 1
-        }else if(elem.group.includes("transport")){
+        }
+        if(elem.group.includes("transport")){
             transport += 1;
-        }else if(elem.group.includes("lineMaker")){
+        }
+        if(elem.group.includes("lineMaker")){
             linemaker += 1;
         }
     }
   })
-  setdata('lastData' , {Truck : Truck , transport : transport , commerce : commerce , linemaker : linemaker , USER : USER})
-  console.log(getdata('lastData'))
+   await lastUsers.findOneAndUpdate({name : 'userCounter'} , {
+    Truck : Truck , 
+    transport :transport,
+    commerce : commerce,
+    linemaker : linemaker,
+    USER : USER
+})
+//   setdata('lastData' , {Truck : Truck , transport : transport , commerce : commerce , linemaker : linemaker , USER : USER})
+//   console.log(getdata('lastData'))
 }, 24*60*60*1000);
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

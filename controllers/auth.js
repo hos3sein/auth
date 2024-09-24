@@ -9,6 +9,7 @@ const sendSmsTest=require("../utils/testServerSms")
 const { getdata } = require("../cache");
 const phoneUtil = require('google-libphonenumber');
 const adminGroup = require("../models/adminGroup");
+const lastUsers = require("../models/lastUsers")
 const pp = phoneUtil.PhoneNumberUtil.getInstance()
 
 
@@ -60,8 +61,10 @@ exports.register = asyncHandler(async (req, res, next) => {
 //   }else{
 //       const sendsms=false
 //   }
- 
-  const sendsms=false
+ let sendsms=false
+ if (pp.isValidNumberForRegion(pp.parse( newNum , 'ca'), 'ca')){
+  sendsms=true
+ }
   console.log(code)
   const { phone, email } = req.body;
   
@@ -1122,11 +1125,14 @@ exports.totalData = asyncHandler(async (req, res, next) => {
         USER+=1
         if (elem.group.includes("truck")){
             Truck+=1
-        }else if(elem.group.includes("commerce")){
+        } 
+        if(elem.group.includes("commerce")){
             commerce += 1
-        }else if(elem.group.includes("transport")){
+        }
+        if(elem.group.includes("transport")){
             transport += 1;
-        }else if(elem.group.includes("lineMaker")){
+        }
+        if(elem.group.includes("lineMaker")){
             linemaker += 1;
         }
     }
@@ -1135,20 +1141,19 @@ exports.totalData = asyncHandler(async (req, res, next) => {
   
   
     
-  let lastTruck = Truck;
-  let lasttransport = transport;
-  let lastcommerce = commerce;
-  let lastlinemaker = linemaker;
-  let lastUSER = USER;
-  const data = getdata('lastData')
-  if (data){
-    console.log('da>>>' , data)
-    lastTruck = data.Truck
-    lasttransport = data.transport
-    lastcommerce=data.commerce
-    lastlinemaker=data.linemaker
-    lastUSER = data.USER
-  }
+//   let lastTruck = Truck;
+//   let lasttransport = transport;
+//   let lastcommerce = commerce;
+//   let lastlinemaker = linemaker;
+//   let lastUSER = USER;
+  const data = await lastUsers.findOne({name : "userCounter"})
+  console.log('da>>>' , data)
+  lastTruck = data.Truck
+  lasttransport = data.transport
+  lastcommerce=data.commerce
+  lastlinemaker=data.linemaker
+  lastUSER = data.USER
+  
     
   
   const allUserAddInYear = await User.find({
@@ -1193,6 +1198,13 @@ exports.totalData = asyncHandler(async (req, res, next) => {
   const transportPersent = ((transport-lasttransport)/lasttransport)*100
   const lineMakerPersent = ((linemaker-lastlinemaker)/lastlinemaker)*100
   const userperc = ((USER-lastUSER)/lastUSER)*100
+
+
+
+     console.log('now' , transport)
+  console.log('last' , lasttransport)
+  console.log('perc' , transportPersent)
+
 
   console.log('prt' , truckPersent)
 

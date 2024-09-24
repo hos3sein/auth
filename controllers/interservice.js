@@ -36,6 +36,27 @@ exports.createUserLineMaker = asyncHandler(async (req, res, next) => {
   });
 });
 
+
+
+
+
+exports.putPoints = asyncHandler(async(req , res , next)=>{
+  console.log('bbbbbbbbbb',req.body)
+  const {reason , userId , point } = req.body;
+  const user = await User.findById(userId)
+  console.log('points' , user.points + point)
+  const newPoint = user.points + point
+  await User.findByIdAndUpdate(userId , {
+    $addToSet : {pointResons : reason},
+    points : newPoint
+  })
+  return res.status(200).json({
+    success : true
+  })
+})
+
+
+
 exports.getDeviceToken = asyncHandler(async (req, res, next) => {
   const user = await User.findById(req.params.id);
 
